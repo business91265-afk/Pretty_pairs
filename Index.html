@@ -90,31 +90,6 @@ document.getElementById('form').onsubmit=async e=>{e.preventDefault();if(!db||!u
 async function session(){if(db){let r=await db.auth.getSession();if(r.data.session){user=r.data.session.user;showAdmin()}}}if(adminMode)session();
   </script>
   <script type="module">
-import { initializeApp } from
-  "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
-
-import {
-  getFirestore,
-  collection,
-  onSnapshot
-} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
-
-const firebaseConfig = {
-  apiKey: "AIzaSyDY3yjvOTP8LPyx_TD71ri0KFnosA92gXg",
-  authDomain: "pretty-pairs-project.firebaseapp.com",
-  projectId: "pretty-pairs-project",
-  storageBucket: "pretty-pairs-project.firebasestorage.app",
-  messagingSenderId: "729074311511",
-  appId: "1:729074311511:web:addad746c1742cb1779e12"
-};
-
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-
-onSnapshot(collection(db, "products"), (snapshot) => {
-  console.log("Firebase products:", snapshot.docs.map(d => d.data()));
-});
-</script>
 
   <script type="module">
 import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
