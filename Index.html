@@ -115,61 +115,6 @@ onSnapshot(collection(db, "products"), (snapshot) => {
 });
 </script>
 
-<script type="module">
-import { initializeApp, getApp, getApps } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
-import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
-
-const config = {
-  apiKey: "AIzaSyDY3yjvOTP8LPyx_TD71ri0KFnosA92gXg",
-  authDomain: "pretty-pairs-project.firebaseapp.com",
-  projectId: "pretty-pairs-project",
-  storageBucket: "pretty-pairs-project.firebasestorage.app",
-  messagingSenderId: "729074311511",
-  appId: "1:729074311511:web:addad746c1742cb1779e12"
-};
-
-async function loadFirebaseProducts() {
-  try {
-    const app = getApps().length ? getApp() : initializeApp(config);
-    const db = getFirestore(app);
-    const snapshot = await getDocs(collection(db, "products"));
-    const grid = document.querySelector(".grid");
-    if (!grid) return;
-
-    grid.innerHTML = "";
-
-    snapshot.forEach((item) => {
-      const p = item.data();
-      const card = document.createElement("article");
-      card.className = "card";
-
-      const img = document.createElement("img");
-      img.src = p.photo || "";
-      img.alt = p.name || "Footwear";
-      img.loading = "lazy";
-
-      const pad = document.createElement("div");
-      pad.className = "pad";
-
-      const name = document.createElement("div");
-      name.className = "name";
-      name.textContent = p.name || "Footwear";
-
-      const price = document.createElement("div");
-      price.className = "price";
-      price.textContent = "₹" + (p.price ?? "");
-
-      pad.append(name, price);
-      card.append(img, pad);
-      grid.append(card);
-    });
-  } catch (error) {
-    console.error("Firebase products load nahi hue:", error);
-  }
-}
-
-loadFirebaseProducts();
-</script>
   <script type="module">
 import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
 import { getFirestore, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
