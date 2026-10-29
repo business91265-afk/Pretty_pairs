@@ -77,7 +77,57 @@ function safe(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&
 function rupees(n){return '₹'+Number(n||0).toLocaleString('en-IN')}
 function filtered(p){let c=String(p.category||'').toLowerCase();if(currentFilter==='Women')return !c.includes('kid')&&!c.includes('child');if(currentFilter==='Kids')return c.includes('kid')||c.includes('child');if(currentFilter==='Sandals'||currentFilter==='Shoes')return c.includes(currentFilter.toLowerCase());return true}
 function render(){let el=document.getElementById('grid'),arr=products.filter(filtered);if(!arr.length){el.innerHTML='<div class="empty">No products in this category yet. Message us to ask about the latest collection.</div>';return}el.innerHTML=arr.map((p,i)=>`<article class="card" role="button" tabindex="0" data-id="${safe(p.id)}"><img loading="lazy" src="${safe(p.image_url||demo[i%4].image_url)}" alt="${safe(p.name)}" onerror="this.onerror=null;this.src='${demo[i%4].image_url}'"><div class="pad"><div class="tag">${safe(p.category||'Footwear')}</div><div class="name">${safe(p.name)}</div><div class="price">${rupees(p.price)}</div><div class="muted">Tap to view details ↗</div></div></article>`).join('');el.querySelectorAll('.card').forEach(card=>{let open=()=>detail(products.find(p=>String(p.id)===card.dataset.id));card.onclick=open;card.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();open()}}})}
-async function load(){let data=[],error=null;try{if(!db){error=new Error('Catalogue connection unavailable')}else{const request=db.from('Products').select('id,created_at,name:Name,price:Price,category:Category,image_url:Image_url,sizes:Size,stock:Stock').order('created_at',{ascending:false});const timeout=new Promise((_,reject)=>setTimeout(()=>reject(new Error('Catalogue request timed out')),8000));const r=await Promise.race([request,timeout]);data=r.data||[];error=r.error}}catch(e){error=e}products=data.length?data:demo;render();document.getElementById('notice').textContent=error?'Showing sample styles because the live catalogue could not be loaded. These are illustrative only; message the store to confirm real products, stock and prices.':!data.length?'Illustrative styles shown; contact the store to confirm current stock and prices.':'Message us to confirm current availability and prices.'}
+  
+async function load(){
+  const notice = document.getElementById('notice');
+
+  try {
+    const { initializeApp, getApps, getApp } = await import(
+      'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js'
+    );
+    const { getFirestore, collection, getDocs } = await import(
+      'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js'
+    );
+
+    const config = {
+      apiKey: "AIzaSyDY3yjvOTP8LPyx_TD71ri0KFnosA92gXg",
+      authDomain: "pretty-pairs-project.firebaseapp.com",
+      projectId: "pretty-pairs-project",
+      storageBucket: "pretty-pairs-project.firebasestorage.app",
+      messagingSenderId: "729074311511",
+      appId: "1:729074311511:web:addad746c1742cb1779e12"
+    };
+
+    const app = getApps().length ? getApp() : initializeApp(config);
+    const fdb = getFirestore(app);
+    const snapshot = await getDocs(collection(fdb, 'products'));
+
+    const data = snapshot.docs.map(d => {
+      const p = d.data();
+      return {
+        id: d.id,
+        name: p.name || p.Name || 'Footwear',
+        price: Number(p.price ?? p.Price) || 0,
+        category: p.category || p.Category || 'Women',
+        image_url: p.photo || p.image_url || p.Image_url || '',
+        sizes: p.sizes || p.size || p.Size || '',
+        stock: Number(p.stock ?? p.Stock ?? 1)
+      };
+    });
+
+    products = data.length ? data : demo.slice();
+    render();
+    notice.textContent = data.length
+      ? 'Message us to confirm current availability and prices.'
+      : 'No products found in Firebase.';
+  } catch (e) {
+    console.error('Firebase catalogue error:', e);
+    products = demo.slice();
+    render();
+    notice.textContent = 'Firebase error: ' + e.message;
+  }
+}
+
 document.querySelectorAll('.filter').forEach(b=>b.onclick=()=>{document.querySelectorAll('.filter').forEach(x=>x.classList.remove('active'));b.classList.add('active');currentFilter=b.dataset.f;render()});
 function detail(p){if(!p)return;document.getElementById('mi').src=p.image_url||demo[0].image_url;document.getElementById('mi').onerror=()=>document.getElementById('mi').src=demo[0].image_url;document.getElementById('mc').textContent=p.category||'Footwear';document.getElementById('mn').textContent=p.name;document.getElementById('mp').textContent=rupees(p.price);document.getElementById('ms').textContent=Number(p.stock)>0?'Please confirm availability with the store':'Please message us to confirm availability';let sizes=String(p.sizes||'').split(/[,/|]/).map(x=>x.trim()).filter(Boolean);document.getElementById('sizes').innerHTML=sizes.length?sizes.map(s=>`<span class="size">${safe(s)}</span>`).join(''):'<span class="muted">Ask us for available sizes</span>';document.getElementById('wa').href='https://wa.me/'+PHONE+'?text='+encodeURIComponent('Hello Pretty Pairs, please tell me about '+p.name+' ('+rupees(p.price)+'), including sizes and availability.');document.getElementById('modal').classList.add('open')}
 document.getElementById('close').onclick=()=>document.getElementById('modal').classList.remove('open');document.getElementById('modal').onclick=e=>{if(e.target.id==='modal')e.currentTarget.classList.remove('open')};document.onkeydown=e=>{if(e.key==='Escape')document.getElementById('modal').classList.remove('open')};if(!adminMode){render();document.getElementById('notice').textContent='Sample styles are shown while the live catalogue connects. Confirm actual products, stock and prices with the store.';load().catch(()=>{products=demo.slice();render();document.getElementById('notice').textContent='Showing sample styles. Live products could not be loaded; please confirm actual stock and prices with the store.'})}
