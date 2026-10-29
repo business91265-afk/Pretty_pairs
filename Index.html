@@ -133,7 +133,6 @@ async function loadFirebaseProducts() {
     const app = getApps().length ? getApp() : initializeApp(config);
     const db = getFirestore(app);
     const snapshot = await getDocs(collection(db, "products"));
-
     const grid = document.querySelector(".grid");
     if (!grid || snapshot.empty) return;
 
