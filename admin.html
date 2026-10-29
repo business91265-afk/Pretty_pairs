@@ -1,0 +1,125 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pretty Pairs | Admin</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#f6f3f0;color:#292321;font-family:Arial,sans-serif;padding:20px}
+main{max-width:520px;margin:35px auto;background:white;padding:24px;border-radius:16px;box-shadow:0 5px 25px #0001}
+h1{font-size:25px}p{color:#766c68}
+input,button{width:100%;padding:13px;margin:7px 0;border-radius:8px;font-size:15px}
+input{border:1px solid #ddd}
+button{border:0;background:#302521;color:white;font-weight:bold}
+button:disabled{opacity:.5}
+.hidden{display:none}
+.item{padding:12px 0;border-bottom:1px solid #eee}
+#status{overflow-wrap:anywhere}
+</style>
+</head>
+<body>
+<main>
+<h1>Pretty Pairs Admin</h1>
+<p>Sign in to manage your store.</p>
+
+<section id="login">
+<input id="email" type="email" placeholder="Admin email" autocomplete="username">
+<input id="password" type="password" placeholder="Password" autocomplete="current-password">
+<button id="loginBtn">Login</button>
+</section>
+
+<section id="dashboard" class="hidden">
+<h2>Dashboard</h2>
+<p id="welcome"></p>
+<h3>Add or update a product</h3>
+<input id="pid" placeholder="Product ID (e.g. sandal01)">
+<input id="name" placeholder="Product name">
+<input id="price" type="number" min="0" placeholder="Price (₹)">
+<input id="photo" type="url" placeholder="Public image URL (https://...)">
+<button id="saveBtn">Save Product</button>
+<div id="products"></div>
+<button id="logoutBtn">Logout</button>
+</section>
+<p id="status" role="status"></p>
+</main>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+import {
+ getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut
+} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
+import {
+ getFirestore, collection, doc, setDoc, getDocs
+} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+
+const firebaseConfig = {
+ apiKey: "AIzaSyDY3yjvOTP8LPyx_TD71ri0KFnosA92gXg",
+ authDomain: "pretty-pairs-project.firebaseapp.com",
+ projectId: "pretty-pairs-project",
+ storageBucket: "pretty-pairs-project.firebasestorage.app",
+ messagingSenderId: "729074311511",
+ appId: "1:729074311511:web:addad746c1742cb1779e12"
+};
+
+const ADMIN_UID = "EASnomYNwgZIn0DM70nKcs1SUN22";
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const $ = id => document.getElementById(id);
+const status = message => $("status").textContent = message;
+
+$("loginBtn").onclick = async () => {
+ try {
+  await signInWithEmailAndPassword(auth,$("email").value.trim(),$("password").value);
+ } catch(e) { status("Login failed: check email and password."); }
+};
+
+onAuthStateChanged(auth, async user => {
+ $("login").classList.toggle("hidden",!!user);
+ $("dashboard").classList.add("hidden");
+ if(!user) return;
+ if(user.uid !== ADMIN_UID) {
+  status("This account is not authorized.");
+  await signOut(auth);
+  return;
+ }
+ $("dashboard").classList.remove("hidden");
+ $("welcome").textContent = "Logged in as " + user.email;
+ status("Admin login successful.");
+ await loadProducts();
+});
+
+$("saveBtn").onclick = async () => {
+ const id=$("pid").value.trim(), name=$("name").value.trim();
+ const price=Number($("price").value), photo=$("photo").value.trim();
+ if(!id || !name || $("price").value==="" || price<0) {
+  status("Enter a product ID, name and valid price."); return;
+ }
+ if(photo && !/^https:\/\//i.test(photo)) {
+  status("Use a secure https image URL."); return;
+ }
+ try {
+  await setDoc(doc(db,"products",id),{name,price,photo});
+  status("Product saved to Firestore.");
+  await loadProducts();
+ } catch(e) { status("Save failed. Check Firestore rules and admin login."); }
+};
+
+async function loadProducts() {
+ try {
+  const snap=await getDocs(collection(db,"products"));
+  $("products").replaceChildren();
+  snap.forEach(item=>{
+   const d=item.data(), row=document.createElement("div");
+   row.className="item";
+   row.textContent=item.id+" — "+(d.name||"Unnamed")+" — ₹"+(d.price??"");
+   $("products").appendChild(row);
+  });
+ } catch(e) { status("Could not load products. Check Firestore rules."); }
+}
+$("logoutBtn").onclick=()=>signOut(auth);
+</script>
+</body>
+</html>
